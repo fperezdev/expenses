@@ -1,39 +1,83 @@
-import type { Expense, Category, PaymentMethod } from "./types";
+import type { Expense, Category, PaymentMethod, Budget } from "./types";
 
-export function exportToCSV(
+const SECTION_MARKER = "# SECTION:";
+
+function escapeCSV(val: string): string {
+  if (val.includes(",") || val.includes('"') || val.includes("\n")) {
+    return `"${val.replace(/"/g, '""')}"`;
+  }
+  return val;
+}
+
+function section(name: string, headers: string[], rows: string[][]): string[] {
+  return [
+    `${SECTION_MARKER} ${name}`,
+    headers.join(","),
+    ...rows.map((row) => row.map(escapeCSV).join(",")),
+  ];
+}
+
+export function exportAllToCSV(
   expenses: Expense[],
   categories: Category[],
-  paymentMethods: PaymentMethod[]
+  paymentMethods: PaymentMethod[],
+  budgets: Budget[]
 ): string {
-  const headers = [
-    "Fecha",
-    "Concepto",
-    "Importe",
-    "Categoria",
-    "Metodo de pago",
-    "Descripcion",
-  ];
+  const parts: string[] = [];
 
-  const catMap = new Map(categories.map((c) => [c.id, c.name]));
-  const pmMap = new Map(paymentMethods.map((p) => [p.id, p.name]));
+  parts.push(
+    ...section(
+      "CATEGORIES",
+      ["id", "name", "color", "icon", "created_at"],
+      categories.map((c) => [c.id, c.name, c.color, c.icon || "", c.created_at])
+    )
+  );
 
-  const rows = expenses.map((e) => [
-    e.date,
-    e.concept,
-    e.amount.toString(),
-    e.category_id ? catMap.get(e.category_id) || "-" : "-",
-    e.payment_method_id ? pmMap.get(e.payment_method_id) || "-" : "-",
-    e.description || "",
-  ]);
+  parts.push(
+    ...section(
+      "PAYMENT_METHODS",
+      ["id", "name", "icon", "created_at"],
+      paymentMethods.map((p) => [p.id, p.name, p.icon || "", p.created_at])
+    )
+  );
 
-  const escapeCSV = (val: string) => {
-    if (val.includes(",") || val.includes('"') || val.includes("\n")) {
-      return `"${val.replace(/"/g, '""')}"`;
-    }
-    return val;
-  };
+  parts.push(
+    ...section(
+      "BUDGETS",
+      ["id", "month", "amount", "created_at"],
+      budgets.map((b) => [b.id, b.month, b.amount.toString(), b.created_at])
+    )
+  );
 
-  return [headers.join(","), ...rows.map((row) => row.map(escapeCSV).join(","))].join("\n");
+  parts.push(
+    ...section(
+      "EXPENSES",
+      [
+        "id",
+        "amount",
+        "concept",
+        "description",
+        "recurring_months",
+        "category_id",
+        "payment_method_id",
+        "date",
+        "created_at",
+      ],
+      expenses.map((e) => [
+        e.id,
+        e.amount.toString(),
+        e.concept,
+        e.description || "",
+        e.recurring_months.toString(),
+        e.category_id || "",
+        e.payment_method_id || "",
+        e.date,
+        e.created_at,
+      ])
+    )
+  );
+
+  return parts.join("\n");
 }
 
 export function downloadCSV(csv: string, filename: string): void {

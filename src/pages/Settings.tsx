@@ -1,19 +1,23 @@
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import {
   Sun,
   Moon,
   Monitor,
   Download,
+  Upload,
+  ShieldCheck,
   Tag,
   CreditCard,
   Database,
 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { getDB, getCurrentPath, changeDBPath } from "@/lib/db";
-import { exportToCSV, downloadCSV } from "@/lib/export";
-import type { ThemeMode } from "@/lib/types";
+import { exportAllToCSV, downloadCSV } from "@/lib/export";
+import { parseCSVPreview, importFromCSV } from "@/lib/import";
+import { performBackupDownload, isBackupEnabled, getBackupInfo } from "@/lib/backup";
+import type { ThemeMode, Expense, Category, PaymentMethod, Budget } from "@/lib/types";
 
 const themeOptions: { value: ThemeMode; label: string; icon: typeof Sun }[] = [
   { value: "light", label: "Claro", icon: Sun },
@@ -22,10 +26,33 @@ const themeOptions: { value: ThemeMode; label: string; icon: typeof Sun }[] = [
 ];
 
 export default function Settings() {
+  const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { theme, setTheme } = useTheme();
   const [dbPath, setDbPath] = useState(getCurrentPath());
   const [pathInput, setPathInput] = useState(getCurrentPath());
   const [pathChanged, setPathChanged] = useState(false);
+  const [importPreview, setImportPreview] = useState<{
+    categories: number;
+    paymentMethods: number;
+    budgets: number;
+    expenses: number;
+  } | null>(null);
+  const [importCSV, setImportCSV] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [showConfirmImport, setShowConfirmImport] = useState(false);
+
+  const [backupEnabled, setBackupEnabled] = useState(isBackupEnabled);
+  const [backupInterval, setBackupInterval] = useState(() => {
+    try {
+      const h = localStorage.getItem("backup_interval_hours");
+      return h || "24";
+    } catch {
+      return "24";
+    }
+  });
+  const [backupInfo, setBackupInfo] = useState(getBackupInfo);
+  const [backingUp, setBackingUp] = useState(false);
 
   useEffect(() => {
     setDbPath(getCurrentPath());
@@ -43,45 +70,59 @@ export default function Settings() {
   const handleExport = async () => {
     try {
       const db = getDB();
-      const expenses = await db.selectObjects(
-        `SELECT * FROM expenses ORDER BY date DESC`
-      ) as unknown as Record<string, unknown>[];
-      const categories = await db.selectObjects(
-        `SELECT id, name FROM categories`
-      ) as unknown as { id: string; name: string }[];
-      const paymentMethods = await db.selectObjects(
-        `SELECT id, name FROM payment_methods`
-      ) as unknown as { id: string; name: string }[];
+      const expenses = (await db.selectObjects(
+        "SELECT * FROM expenses ORDER BY date DESC"
+      )) as unknown as Expense[];
+      const categories = (await db.selectObjects(
+        "SELECT * FROM categories ORDER BY name"
+      )) as unknown as Category[];
+      const paymentMethods = (await db.selectObjects(
+        "SELECT * FROM payment_methods ORDER BY name"
+      )) as unknown as PaymentMethod[];
+      const budgets = (await db.selectObjects(
+        "SELECT * FROM budgets ORDER BY month DESC"
+      )) as unknown as Budget[];
 
-      const csv = exportToCSV(
-        expenses.map((e) => ({
-          id: e.id as string,
-          amount: e.amount as number,
-          concept: e.concept as string,
-          description: (e.description as string) || "",
-          recurring_months: (e.recurring_months as number) || 0,
-          category_id: e.category_id as string | null,
-          payment_method_id: e.payment_method_id as string | null,
-          date: e.date as string,
-          created_at: e.created_at as string,
-        })),
-        categories.map((c) => ({
-          id: c.id,
-          name: c.name,
-          color: "",
-          icon: "",
-          created_at: "",
-        })),
-        paymentMethods.map((p) => ({
-          id: p.id,
-          name: p.name,
-          icon: "",
-          created_at: "",
-        }))
-      );
+      const csv = exportAllToCSV(expenses, categories, paymentMethods, budgets);
       downloadCSV(csv, `expenses-${new Date().toISOString().slice(0, 10)}.csv`);
     } catch (err) {
       alert("Error al exportar: " + (err as Error).message);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = reader.result as string;
+      const preview = parseCSVPreview(text);
+      setImportCSV(text);
+      setImportPreview(preview);
+      setShowConfirmImport(true);
+    };
+    reader.onerror = () => alert("Error al leer el archivo");
+    reader.readAsText(file);
+
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleConfirmImport = async (mode: "replace" | "merge") => {
+    setShowConfirmImport(false);
+    setImporting(true);
+    try {
+      const result = await importFromCSV(importCSV, mode);
+      alert(
+        `Importado: ${result.categories} categorias, ${result.paymentMethods} metodos de pago, ${result.budgets} presupuestos, ${result.expenses} gastos.`
+      );
+      setImportPreview(null);
+      setImportCSV("");
+      navigate("/");
+    } catch (err) {
+      alert("Error al importar: " + (err as Error).message);
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -141,6 +182,109 @@ export default function Settings() {
         <span className="flex-1 text-sm">Exportar CSV</span>
       </button>
 
+      <button
+        onClick={() => fileInputRef.current?.click()}
+        disabled={importing}
+        className="flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 text-left hover:bg-gray-50 disabled:opacity-50 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800"
+      >
+        <Upload size={20} className="text-gray-400" />
+        <span className="flex-1 text-sm">
+          {importing ? "Importando..." : "Importar CSV"}
+        </span>
+      </button>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".csv"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+
+      <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+        <div className="flex items-center gap-3">
+          <ShieldCheck size={20} className="text-gray-400" />
+          <span className="text-sm font-medium text-gray-500">
+            Backup automatico
+          </span>
+        </div>
+        <p className="mt-2 text-xs text-gray-400">
+          Al abrir la app te avisa si toca descargar el backup. El CSV se guarda en tu dispositivo.
+        </p>
+
+        <label className="mt-3 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              const next = !backupEnabled;
+              setBackupEnabled(next);
+              try {
+                localStorage.setItem("backup_enabled", String(next));
+              } catch {}
+            }}
+            className={`flex h-6 w-11 items-center rounded-full transition-colors ${
+              backupEnabled ? "bg-indigo-600" : "bg-gray-300 dark:bg-gray-600"
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+                backupEnabled ? "translate-x-6" : "translate-x-1"
+              }`}
+            />
+          </button>
+          <span className="text-sm font-medium">
+            {backupEnabled ? "Activado" : "Desactivado"}
+          </span>
+        </label>
+
+        {backupEnabled && (
+          <>
+            <div className="mt-3">
+              <label className="text-xs font-medium text-gray-500">
+                Intervalo (horas)
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="720"
+                value={backupInterval}
+                onChange={(e) => {
+                  setBackupInterval(e.target.value);
+                  try {
+                    localStorage.setItem("backup_interval_hours", e.target.value);
+                  } catch {}
+                }}
+                className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800"
+              />
+            </div>
+
+            {backupInfo.lastBackupTs > 0 && (
+              <p className="mt-2 text-xs text-gray-400">
+                Ultimo backup:{" "}
+                {new Date(backupInfo.lastBackupTs).toLocaleString("es-CL")}
+              </p>
+            )}
+
+            <button
+              onClick={async () => {
+                setBackingUp(true);
+                const ok = await performBackupDownload();
+                setBackingUp(false);
+                setBackupInfo(getBackupInfo());
+                alert(
+                  ok
+                    ? "Backup descargado."
+                    : "Error al generar el backup."
+                );
+              }}
+              disabled={backingUp}
+              className="mt-3 w-full rounded-xl bg-indigo-600 py-2.5 text-sm font-medium text-white disabled:opacity-50"
+            >
+              {backingUp ? "Descargando..." : "Hacer backup ahora"}
+            </button>
+          </>
+        )}
+      </div>
+
       <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
         <div className="flex items-center gap-3">
           <Database size={20} className="text-gray-400" />
@@ -183,6 +327,50 @@ export default function Settings() {
           Control de gastos personal. React + SQLite + PWA.
         </p>
       </div>
+
+      {showConfirmImport && importPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-800">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-500/20">
+              <Upload size={24} className="text-yellow-500" />
+            </div>
+            <h3 className="text-center text-lg font-semibold">Importar datos</h3>
+            <p className="mt-2 text-center text-sm text-gray-500">
+              Se encontraron: {importPreview.categories} categorias,{" "}
+              {importPreview.paymentMethods} metodos de pago,{" "}
+              {importPreview.budgets} presupuestos, {importPreview.expenses}{" "}
+              gastos.
+            </p>
+            <p className="mt-1 text-center text-xs text-gray-400">
+              Elegi como aplicar los datos:
+            </p>
+            <div className="mt-5 space-y-2">
+              <button
+                onClick={() => handleConfirmImport("replace")}
+                className="w-full rounded-xl bg-red-500 py-2.5 text-sm font-medium text-white"
+              >
+                Reemplazar todo (borra datos actuales)
+              </button>
+              <button
+                onClick={() => handleConfirmImport("merge")}
+                className="w-full rounded-xl bg-indigo-600 py-2.5 text-sm font-medium text-white"
+              >
+                Agregar a lo existente (sin borrar)
+              </button>
+            </div>
+            <button
+              onClick={() => {
+                setShowConfirmImport(false);
+                setImportPreview(null);
+                setImportCSV("");
+              }}
+              className="mt-2 w-full rounded-xl border border-gray-300 py-2.5 text-sm font-medium dark:border-gray-600"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="h-20" />
     </div>

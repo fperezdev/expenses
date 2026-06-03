@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import BottomNav from "@/components/BottomNav";
 import OfflineIndicator from "@/components/OfflineIndicator";
+import BackupBanner from "@/components/BackupBanner";
 import { initDB } from "@/lib/db";
+import { isBackupDue } from "@/lib/backup";
 import Spinner from "@/components/Spinner";
 
 const hideNavRoutes = ["/edit/"];
@@ -11,10 +13,14 @@ export default function AppLayout() {
   const location = useLocation();
   const [dbReady, setDbReady] = useState(false);
   const [dbError, setDbError] = useState("");
+  const [backupDue, setBackupDue] = useState(false);
 
   useEffect(() => {
     initDB()
-      .then(() => setDbReady(true))
+      .then(() => {
+        setDbReady(true);
+        setBackupDue(isBackupDue());
+      })
       .catch((err) => setDbError((err as Error).message));
   }, []);
 
@@ -53,6 +59,7 @@ export default function AppLayout() {
   return (
     <div className="mx-auto min-h-screen max-w-lg pb-20">
       <OfflineIndicator />
+      <BackupBanner visible={backupDue} />
       <main className="px-4 pt-4">
         <Outlet />
       </main>
