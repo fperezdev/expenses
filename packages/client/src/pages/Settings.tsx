@@ -21,9 +21,7 @@ import { parseCSVPreview, importFromCSV } from "@/lib/import";
 import { performBackupDownload, isBackupEnabled, getBackupInfo } from "@/lib/backup";
 import {
   isLoggedIn, clearAuth,
-  isSyncEnabled, setSyncEnabled,
-  getSyncIntervalMs, setSyncIntervalHours,
-  performSync, login, register,
+  login, register,
   updateProfile, getUserTimezone,
 } from "@/lib/sync";
 import type { ThemeMode, Expense, Category, PaymentMethod, Budget } from "@/lib/types";
@@ -64,10 +62,6 @@ export default function Settings() {
   const [backingUp, setBackingUp] = useState(false);
 
   // ─── Cloud Sync state ───
-  const [syncEnabled, setSyncEnabledState] = useState(isSyncEnabled());
-  const [syncIntervalHours, setSyncIntervalHoursState] = useState(
-    Math.round(getSyncIntervalMs() / (60 * 60 * 1000))
-  );
   const [loggedIn, setLoggedIn] = useState(isLoggedIn());
   const [timezone, setTimezone] = useState(() => getUserTimezone());
   const [budgetAmount, setBudgetAmount] = useState("");
@@ -77,8 +71,7 @@ export default function Settings() {
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [authError, setAuthError] = useState("");
-  const [syncStatus, setSyncStatus] = useState<"" | "success" | "error">("");
-  const [syncMessage, setSyncMessage] = useState("");
+  const [tzFeedback, setTzFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   useEffect(() => {
     setDbPath(getCurrentPath());
@@ -445,9 +438,6 @@ export default function Settings() {
                     setLoggedIn(true);
                     setAuthEmail("");
                     setAuthPassword("");
-                    // Enable sync automatically on first login
-                    setSyncEnabledState(true);
-                    setSyncEnabled(true);
                   } else {
                     setAuthError(result.error || "Error");
                   }
@@ -484,101 +474,24 @@ export default function Settings() {
               onClick={async () => {
                 const success = await updateProfile({ timezone });
                 if (success) {
-                  setSyncStatus("success");
-                  setSyncMessage("Zona horaria guardada");
+                  setTzFeedback({ type: "success", message: "Zona horaria guardada" });
                 } else {
-                  setSyncStatus("error");
-                  setSyncMessage("Error al guardar la zona horaria");
+                  setTzFeedback({ type: "error", message: "Error al guardar la zona horaria" });
                 }
                 setTimeout(() => {
-                  setSyncStatus("");
-                  setSyncMessage("");
+                  setTzFeedback(null);
                 }, 5000);
               }}
               className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
             >
               Guardar zona horaria
             </button>
-          </div>
-        )}
-
-        {/* Sync controls */}
-        {loggedIn && (
-          <>
-            {/* Sync toggle */}
-            <div className="mt-4 flex items-center justify-between">
-              <span className="text-sm">Sincronizar automaticamente</span>
-              <button
-                onClick={() => {
-                  const next = !syncEnabled;
-                  setSyncEnabledState(next);
-                  setSyncEnabled(next);
-                }}
-                className={`h-6 w-11 rounded-full transition-colors ${
-                  syncEnabled ? "bg-indigo-600" : "bg-gray-300 dark:bg-gray-700"
-                }`}
-              >
-                <span
-                  className={`block h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                    syncEnabled ? "translate-x-[22px]" : "translate-x-0.5"
-                  }`}
-                />
-              </button>
-            </div>
-
-            {/* Sync interval */}
-            {syncEnabled && (
-              <div className="mt-3 flex items-center justify-between">
-                <span className="text-sm">Cada</span>
-                <select
-                  value={syncIntervalHours}
-                  onChange={(e) => {
-                    const v = Number(e.target.value);
-                    setSyncIntervalHoursState(v);
-                    setSyncIntervalHours(v);
-                  }}
-                  className="rounded-lg border border-gray-200 bg-gray-50 px-2 py-1 text-sm dark:border-gray-800 dark:bg-gray-800"
-                >
-                  <option value={1}>1 hora</option>
-                  <option value={6}>6 horas</option>
-                  <option value={12}>12 horas</option>
-                  <option value={24}>24 horas</option>
-                  <option value={48}>48 horas</option>
-                  <option value={168}>1 semana</option>
-                </select>
-              </div>
-            )}
-
-            {/* Manual sync button */}
-            <button
-              onClick={async () => {
-                setSyncStatus("");
-                setSyncMessage("");
-                const result = await performSync();
-                if (result.ok) {
-                  setSyncStatus("success");
-                  setSyncMessage("Sincronizacion completada");
-                } else {
-                  setSyncStatus("error");
-                  setSyncMessage(result.error || "Error al sincronizar");
-                }
-                setTimeout(() => {
-                  setSyncStatus("");
-                  setSyncMessage("");
-                }, 5000);
-              }}
-              className="mt-4 w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm hover:bg-gray-100 dark:border-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700"
-            >
-              Sincronizar ahora
-            </button>
-
-            {/* Sync status */}
-            {syncStatus && (
-              <p className={`mt-2 text-xs ${syncStatus === "success" ? "text-green-600" : "text-red-500"}`}>
-                {syncMessage}
+            {tzFeedback && (
+              <p className={`mt-2 text-xs ${tzFeedback.type === "success" ? "text-green-600" : "text-red-500"}`}>
+                {tzFeedback.message}
               </p>
             )}
-          </>
+          </div>
         )}
       </div>
 

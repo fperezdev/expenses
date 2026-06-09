@@ -5,7 +5,7 @@ import OfflineIndicator from "@/components/OfflineIndicator";
 import BackupBanner from "@/components/BackupBanner";
 import { initDB } from "@/lib/db";
 import { isBackupDue } from "@/lib/backup";
-import { isSyncEnabled, getSyncIntervalMs, performSync } from "@/lib/sync";
+import { isLoggedIn, performSync } from "@/lib/sync";
 import Spinner from "@/components/Spinner";
 
 const hideNavRoutes = ["/edit/"];
@@ -27,18 +27,16 @@ export default function AppLayout() {
 
   // Sync scheduler
   useEffect(() => {
-    if (!isSyncEnabled()) return;
-
+    if (!isLoggedIn()) return;
     const interval = setInterval(() => {
       performSync().catch(() => {});
-    }, getSyncIntervalMs());
-
+    }, 24 * 60 * 60 * 1000); // 24 horas fijo
     return () => clearInterval(interval);
   }, []);
 
-  // Initial sync on mount if enabled
+  // Initial sync on mount if logged in
   useEffect(() => {
-    if (isSyncEnabled()) {
+    if (isLoggedIn()) {
       performSync().catch(() => {});
     }
   }, []);

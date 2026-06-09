@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Download } from "lucide-react";
 import { performBackupDownload } from "@/lib/backup";
-import { isSyncEnabled } from "@/lib/sync";
+import { isLoggedIn } from "@/lib/sync";
 
 interface Props {
   visible: boolean;
@@ -11,8 +11,8 @@ export default function BackupBanner({ visible }: Props) {
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
 
-  // If sync is enabled, don't show the backup banner
-  if (isSyncEnabled()) return null;
+  // If user is logged in with cloud sync, don't show the backup banner
+  if (isLoggedIn()) return null;
 
   if (!visible || done) return null;
 

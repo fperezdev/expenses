@@ -2,8 +2,6 @@ import type { SyncPayload, SyncResponse, Expense, Category, PaymentMethod, Budge
 import { getDB } from "./db";
 
 // ─── localStorage keys ───
-const SYNC_ENABLED_KEY = "sync_enabled";
-const SYNC_INTERVAL_HOURS_KEY = "sync_interval_hours";
 const LAST_SYNC_TS_KEY = "sync_last_ts";
 const AUTH_TOKEN_KEY = "auth_token";
 const SERVER_URL_KEY = "server_url";
@@ -29,24 +27,6 @@ export function clearAuth(): void {
 
 export function isLoggedIn(): boolean {
   return !!getAuthToken();
-}
-
-// ─── Sync config ───
-export function isSyncEnabled(): boolean {
-  return localStorage.getItem(SYNC_ENABLED_KEY) === "true";
-}
-
-export function setSyncEnabled(enabled: boolean): void {
-  localStorage.setItem(SYNC_ENABLED_KEY, String(enabled));
-}
-
-export function getSyncIntervalMs(): number {
-  const hours = parseFloat(localStorage.getItem(SYNC_INTERVAL_HOURS_KEY) || "24");
-  return (isNaN(hours) || hours <= 0 ? 24 : hours) * 60 * 60 * 1000;
-}
-
-export function setSyncIntervalHours(hours: number): void {
-  localStorage.setItem(SYNC_INTERVAL_HOURS_KEY, String(hours));
 }
 
 // ─── Last sync timestamp ───
@@ -233,19 +213,4 @@ export async function updateProfile(updates: { timezone?: string }): Promise<boo
 
 export function getUserTimezone(): string {
   return localStorage.getItem(USER_TIMEZONE_KEY) || Intl.DateTimeFormat().resolvedOptions().timeZone;
-}
-
-// ─── Sync status ───
-export function getSyncStatus(): {
-  enabled: boolean;
-  loggedIn: boolean;
-  lastSyncTs: string;
-  intervalHours: number;
-} {
-  return {
-    enabled: isSyncEnabled(),
-    loggedIn: isLoggedIn(),
-    lastSyncTs: getLastSyncTs(),
-    intervalHours: Math.round(getSyncIntervalMs() / (60 * 60 * 1000)),
-  };
 }
