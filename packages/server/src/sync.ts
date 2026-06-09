@@ -39,6 +39,15 @@ sync.post("/", async (c) => {
 
   const statements: D1PreparedStatement[] = [];
 
+  // 0. Full replace: delete all user data first
+  if (body.full_replace) {
+    for (const table of TABLES) {
+      statements.push(
+        c.env.DB.prepare(`DELETE FROM ${table} WHERE user_id = ?`).bind(userId)
+      );
+    }
+  }
+
   // 1. Upsert incoming changes from client
   for (const table of TABLES) {
     const records = (body as unknown as Record<string, Record<string, unknown>[]>)[table];

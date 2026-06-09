@@ -21,6 +21,7 @@ import {
   isLoggedIn, clearAuth, getUserEmail,
   login, register,
   updateProfile, getUserTimezone,
+  performSync,
 } from "@/lib/sync";
 import type { ThemeMode, Expense, Category, PaymentMethod, Budget } from "@/lib/types";
 
@@ -315,6 +316,7 @@ function DataManagementSection() {
       );
       setImportPreview(null);
       setImportCSV("");
+      performSync({ fullReplace: mode === "replace" }).catch((err) => console.error("Sync after import failed:", err));
       navigate("/");
     } catch (err) {
       alert("Error al importar: " + (err as Error).message);
@@ -461,6 +463,11 @@ function DataManagementSection() {
               >
                 Reemplazar todo (borra datos actuales)
               </button>
+              {isLoggedIn() && (
+                <p className="px-1 text-xs text-red-400">
+                  ⚠ Esto borra también los datos de todos tus dispositivos sincronizados.
+                </p>
+              )}
               <button
                 onClick={() => handleConfirmImport("merge")}
                 className="w-full rounded-xl bg-indigo-600 py-2.5 text-sm font-medium text-white"

@@ -25,16 +25,7 @@ export default function AppLayout() {
       .catch((err) => setDbError((err as Error).message));
   }, []);
 
-  // Sync scheduler
-  useEffect(() => {
-    if (!isLoggedIn()) return;
-    const interval = setInterval(() => {
-      performSync().catch(() => {});
-    }, 24 * 60 * 60 * 1000); // 24 horas fijo
-    return () => clearInterval(interval);
-  }, []);
-
-  // Initial sync on mount if logged in
+  // Sync on mount if logged in
   useEffect(() => {
     if (isLoggedIn()) {
       performSync().catch(() => {});

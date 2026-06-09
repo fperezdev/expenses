@@ -8,7 +8,7 @@ type Bindings = {
   JWT_SECRET: string;
 };
 
-const auth = new Hono<{ Bindings: Bindings }>();
+const auth = new Hono<{ Bindings: Bindings; Variables: { userId: string } }>();
 
 function getSecret(env: Bindings): Uint8Array {
   return new TextEncoder().encode(env.JWT_SECRET);
@@ -79,8 +79,8 @@ auth.post("/login", async (c) => {
 });
 
 // PATCH /api/auth/profile
-auth.patch("/profile", authMiddleware as any, async (c) => {
-  const userId = c.get("userId") as string;
+auth.patch("/profile", authMiddleware, async (c) => {
+  const userId = c.get("userId");
   const { timezone } = await c.req.json<{ timezone: string }>();
 
   if (typeof timezone !== "string") {

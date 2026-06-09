@@ -286,9 +286,16 @@ export async function importFromCSV(
 ): Promise<ImportResult> {
   const sections = parseCSVSections(csv);
 
-  if (mode === "replace") {
-    return replaceAll(sections);
-  }
+  const result =
+    mode === "replace" ? await replaceAll(sections) : await mergeData(sections);
 
-  return mergeData(sections);
+  // Bump updated_at for all tables so sync detects imported records
+  const now = nowSQLite();
+  const db = getDB();
+  await db.exec({ sql: "UPDATE categories SET updated_at = ?", bind: [now] });
+  await db.exec({ sql: "UPDATE payment_methods SET updated_at = ?", bind: [now] });
+  await db.exec({ sql: "UPDATE budgets SET updated_at = ?", bind: [now] });
+  await db.exec({ sql: "UPDATE expenses SET updated_at = ?", bind: [now] });
+
+  return result;
 }

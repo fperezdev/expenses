@@ -77,7 +77,7 @@ async function upsertLocal(
 }
 
 // ─── Sync ───
-export async function performSync(): Promise<{ ok: boolean; error?: string }> {
+export async function performSync(options?: { fullReplace?: boolean }): Promise<{ ok: boolean; error?: string }> {
   const token = getAuthToken();
 
   if (!token) {
@@ -112,6 +112,7 @@ export async function performSync(): Promise<{ ok: boolean; error?: string }> {
     // 2. Send to server
     const payload: SyncPayload = {
       last_sync_ts: lastSyncTs,
+      full_replace: options?.fullReplace || undefined,
       expenses: localExpenses,
       categories: localCategories,
       payment_methods: localPaymentMethods,

@@ -97,6 +97,7 @@ export interface AuthResponse {
 // ========== Sync ==========
 export interface SyncPayload {
   last_sync_ts: string;
+  full_replace?: boolean;
   expenses: Expense[];
   categories: Category[];
   payment_methods: PaymentMethod[];
