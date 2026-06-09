@@ -79,12 +79,14 @@ export interface PeriodSummary {
 export interface User {
   id: string;
   email: string;
+  timezone: string;
   created_at: string;
 }
 
 export interface AuthRequest {
   email: string;
   password: string;
+  timezone?: string;
 }
 
 export interface AuthResponse {

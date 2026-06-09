@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { SignJWT } from "jose";
 import bcrypt from "bcryptjs";
+import { authMiddleware } from "./middleware";
 
 type Bindings = {
   DB: D1Database;
@@ -15,7 +16,7 @@ function getSecret(env: Bindings): Uint8Array {
 
 // POST /api/auth/register
 auth.post("/register", async (c) => {
-  const { email, password } = await c.req.json<{ email: string; password: string }>();
+  const { email, password, timezone } = await c.req.json<{ email: string; password: string; timezone?: string }>();
 
   if (!email || !password) {
     return c.json({ error: "Email and password required", code: "VALIDATION" }, 400);
@@ -32,10 +33,11 @@ auth.post("/register", async (c) => {
 
   const id = crypto.randomUUID();
   const passwordHash = await bcrypt.hash(password, 10);
+  const tz = timezone || "";
 
   await c.env.DB.prepare(
-    "INSERT INTO users (id, email, password_hash) VALUES (?, ?, ?)"
-  ).bind(id, email, passwordHash).run();
+    "INSERT INTO users (id, email, password_hash, timezone) VALUES (?, ?, ?, ?)"
+  ).bind(id, email, passwordHash, tz).run();
 
   const token = await new SignJWT({ sub: id, email })
     .setProtectedHeader({ alg: "HS256" })
@@ -43,7 +45,7 @@ auth.post("/register", async (c) => {
     .setExpirationTime("30d")
     .sign(getSecret(c.env));
 
-  return c.json({ token, user: { id, email, created_at: new Date().toISOString() } }, 201);
+  return c.json({ token, user: { id, email, timezone: tz, created_at: new Date().toISOString() } }, 201);
 });
 
 // POST /api/auth/login
@@ -55,8 +57,8 @@ auth.post("/login", async (c) => {
   }
 
   const user = await c.env.DB.prepare(
-    "SELECT id, email, password_hash, created_at FROM users WHERE email = ?"
-  ).bind(email).first<{ id: string; email: string; password_hash: string; created_at: string }>();
+    "SELECT id, email, password_hash, timezone, created_at FROM users WHERE email = ?"
+  ).bind(email).first<{ id: string; email: string; password_hash: string; timezone: string; created_at: string }>();
 
   if (!user) {
     return c.json({ error: "Invalid email or password", code: "AUTH_FAILED" }, 401);
@@ -73,7 +75,23 @@ auth.post("/login", async (c) => {
     .setExpirationTime("30d")
     .sign(getSecret(c.env));
 
-  return c.json({ token, user: { id: user.id, email: user.email, created_at: user.created_at } });
+  return c.json({ token, user: { id: user.id, email: user.email, timezone: user.timezone || "", created_at: user.created_at } });
+});
+
+// PATCH /api/auth/profile
+auth.patch("/profile", authMiddleware as any, async (c) => {
+  const userId = c.get("userId") as string;
+  const { timezone } = await c.req.json<{ timezone: string }>();
+
+  if (!timezone || typeof timezone !== "string") {
+    return c.json({ error: "Timezone is required", code: "VALIDATION" }, 400);
+  }
+
+  await c.env.DB.prepare(
+    "UPDATE users SET timezone = ? WHERE id = ?"
+  ).bind(timezone, userId).run();
+
+  return c.json({ success: true, user: { id: userId, timezone } });
 });
 
 export { auth };

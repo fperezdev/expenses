@@ -6,6 +6,8 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+ALTER TABLE users ADD COLUMN timezone TEXT DEFAULT '';
+
 -- Categories
 CREATE TABLE IF NOT EXISTS categories (
   id TEXT NOT NULL,

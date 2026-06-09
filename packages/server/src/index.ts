@@ -14,7 +14,7 @@ const app = new Hono<{ Bindings: Bindings }>();
 // CORS for the PWA client
 app.use("*", cors({
   origin: "*",
-  allowMethods: ["GET", "POST", "OPTIONS"],
+  allowMethods: ["GET", "POST", "PATCH", "OPTIONS"],
   allowHeaders: ["Content-Type", "Authorization"],
 }));
 

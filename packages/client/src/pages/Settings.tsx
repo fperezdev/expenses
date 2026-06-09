@@ -24,6 +24,7 @@ import {
   isSyncEnabled, setSyncEnabled,
   getSyncIntervalMs, setSyncIntervalHours,
   performSync, login, register,
+  updateProfile, getUserTimezone,
 } from "@/lib/sync";
 import type { ThemeMode, Expense, Category, PaymentMethod, Budget } from "@/lib/types";
 
@@ -68,6 +69,7 @@ export default function Settings() {
     Math.round(getSyncIntervalMs() / (60 * 60 * 1000))
   );
   const [loggedIn, setLoggedIn] = useState(isLoggedIn());
+  const [timezone, setTimezone] = useState(() => getUserTimezone());
   const [budgetAmount, setBudgetAmount] = useState("");
   const [savingBudget, setSavingBudget] = useState(false);
 
@@ -458,6 +460,47 @@ export default function Settings() {
             </div>
           )}
         </div>
+
+        {/* Timezone selector */}
+        {loggedIn && (
+          <div className="mt-4 space-y-2 border-t border-gray-100 pt-4 dark:border-gray-800">
+            <label className="text-sm text-gray-500 dark:text-gray-400">Zona horaria</label>
+            <select
+              value={timezone}
+              onChange={(e) => setTimezone(e.target.value)}
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700"
+            >
+              <option value="">Automatica (navegador)</option>
+              <option value="America/Santiago">America/Santiago</option>
+              <option value="America/Buenos_Aires">America/Buenos_Aires</option>
+              <option value="America/Lima">America/Lima</option>
+              <option value="America/Bogota">America/Bogota</option>
+              <option value="America/Mexico_City">America/Mexico_City</option>
+              <option value="America/New_York">America/New_York</option>
+              <option value="Europe/Madrid">Europe/Madrid</option>
+              <option value="UTC">UTC</option>
+            </select>
+            <button
+              onClick={async () => {
+                const success = await updateProfile({ timezone });
+                if (success) {
+                  setSyncStatus("success");
+                  setSyncMessage("Zona horaria guardada");
+                } else {
+                  setSyncStatus("error");
+                  setSyncMessage("Error al guardar la zona horaria");
+                }
+                setTimeout(() => {
+                  setSyncStatus("");
+                  setSyncMessage("");
+                }, 5000);
+              }}
+              className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              Guardar zona horaria
+            </button>
+          </div>
+        )}
 
         {/* Sync controls */}
         {loggedIn && (

@@ -7,6 +7,7 @@ const SYNC_INTERVAL_HOURS_KEY = "sync_interval_hours";
 const LAST_SYNC_TS_KEY = "sync_last_ts";
 const AUTH_TOKEN_KEY = "auth_token";
 const SERVER_URL_KEY = "server_url";
+const USER_TIMEZONE_KEY = "user_timezone";
 
 // Default server URL — same origin since PWA and API are one Worker
 function getServerUrl(): string {
@@ -171,6 +172,9 @@ export async function login(email: string, password: string): Promise<{ ok: bool
     }
 
     setAuthToken(data.token);
+    if (data.user?.timezone) {
+      localStorage.setItem(USER_TIMEZONE_KEY, data.user.timezone);
+    }
     return { ok: true };
   } catch (err: any) {
     return { ok: false, error: err.message || "Network error" };
@@ -179,10 +183,11 @@ export async function login(email: string, password: string): Promise<{ ok: bool
 
 export async function register(email: string, password: string): Promise<{ ok: boolean; error?: string }> {
   try {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const res = await fetch(`${getServerUrl()}/api/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, timezone }),
     });
 
     const data = await res.json();
@@ -191,10 +196,43 @@ export async function register(email: string, password: string): Promise<{ ok: b
     }
 
     setAuthToken(data.token);
+    if (data.user?.timezone) {
+      localStorage.setItem(USER_TIMEZONE_KEY, data.user.timezone);
+    }
     return { ok: true };
   } catch (err: any) {
     return { ok: false, error: err.message || "Network error" };
   }
+}
+
+export async function updateProfile(updates: { timezone?: string }): Promise<boolean> {
+  const token = getAuthToken();
+  if (!token) return false;
+
+  try {
+    const res = await fetch(`${getServerUrl()}/api/auth/profile`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(updates)
+    });
+
+    if (!res.ok) return false;
+
+    const data = await res.json();
+    if (data.user?.timezone) {
+      localStorage.setItem(USER_TIMEZONE_KEY, data.user.timezone);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function getUserTimezone(): string {
+  return localStorage.getItem(USER_TIMEZONE_KEY) || Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
 // ─── Sync status ───
