@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { formatearMoneda } from "@/lib/utils";
 
 interface Props {
@@ -6,7 +7,7 @@ interface Props {
   spent: number;
 }
 
-export default function SummaryCards({ total, budgetAmount, spent }: Props) {
+const SummaryCards = memo(function SummaryCards({ total, budgetAmount, spent }: Props) {
   const remaining = budgetAmount != null ? budgetAmount - spent : null;
   const isOverBudget = remaining != null && remaining < 0;
 
@@ -56,4 +57,6 @@ export default function SummaryCards({ total, budgetAmount, spent }: Props) {
       ))}
     </div>
   );
-}
+});
+
+export default SummaryCards;

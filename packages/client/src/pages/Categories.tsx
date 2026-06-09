@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Helmet } from "react-helmet-async";
 import { Plus, Pencil, Trash2, Check, X } from "lucide-react";
 import { getDB } from "@/lib/db";
@@ -27,7 +27,7 @@ export default function Categories() {
     load();
   }, []);
 
-  const usedColors = new Set(categories.map((c) => c.color));
+  const usedColors = useMemo(() => new Set(categories.map((c) => c.color)), [categories]);
 
   const handleAdd = async () => {
     const name = newName.trim();

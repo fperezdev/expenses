@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Helmet } from "react-helmet-async";
 import { Save } from "lucide-react";
 import { getDB } from "@/lib/db";
@@ -14,25 +14,26 @@ export default function BudgetPage() {
   const [budgetInput, setBudgetInput] = useState("");
   const [spent, setSpent] = useState(0);
 
-  const monthKey = getMonthKey(date);
+  const monthKey = useMemo(() => getMonthKey(date), [date]);
 
   const loadData = useCallback(async () => {
     try {
       const db = getDB();
+      const range = getDateRange("month", date);
 
-      const budRow = await db.selectObject(
-        "SELECT id, month, amount, created_at FROM budgets WHERE month=? AND deleted_at IS NULL",
-        [monthKey]
-      ) as unknown as Budget | undefined;
+      const [budRow, total] = await Promise.all([
+        db.selectObject(
+          "SELECT id, month, amount, created_at FROM budgets WHERE month=? AND deleted_at IS NULL",
+          [monthKey]
+        ) as unknown as Budget | undefined,
+        db.selectValue(
+          "SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE date >= ? AND date <= ? AND deleted_at IS NULL",
+          [range.start, range.end]
+        ),
+      ]);
 
       setBudget(budRow || null);
       setBudgetInput(budRow ? budRow.amount.toString() : "");
-
-      const range = getDateRange("month", date);
-      const total = await db.selectValue(
-        "SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE date >= ? AND date <= ? AND deleted_at IS NULL",
-        [range.start, range.end]
-      );
       setSpent(Number(total) || 0);
     } catch {}
   }, [monthKey, date]);

@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { formatearMoneda } from "@/lib/utils";
 
 interface Props {
@@ -5,7 +6,7 @@ interface Props {
   budget: number;
 }
 
-export default function BudgetBar({ spent, budget }: Props) {
+const BudgetBar = memo(function BudgetBar({ spent, budget }: Props) {
   const pct = Math.min((spent / budget) * 100, 100);
   const isOver = spent > budget;
   const barColor =
@@ -38,4 +39,6 @@ export default function BudgetBar({ spent, budget }: Props) {
       </div>
     </div>
   );
-}
+});
+
+export default BudgetBar;

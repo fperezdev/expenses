@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { toDateString, getDateRange } from "../utils";
+import { toDateString, getDateRange, mapRowToExpense } from "../utils";
 
 describe("toDateString", () => {
   it("returns date in YYYY-MM-DD format using local time components", () => {
@@ -76,5 +76,103 @@ describe("getDateRange", () => {
       start: "2026-01-01",
       end: "2026-12-31",
     });
+  });
+});
+
+describe("mapRowToExpense", () => {
+  it("maps a full row with category and payment_method", () => {
+    const row = {
+      id: "exp-1",
+      amount: 5000,
+      concept: "Supermercado",
+      description: "Compra semanal",
+      recurring_months: 0,
+      category_id: "cat-1",
+      payment_method_id: "pm-1",
+      date: "2026-06-01",
+      created_at: "2026-06-01T10:00:00Z",
+      updated_at: "2026-06-01T10:00:00Z",
+      deleted_at: null,
+      cat_name: "Alimentacion",
+      cat_color: "#6366f1",
+      pm_name: "Debito",
+      pm_icon: "credit-card",
+    };
+
+    const result = mapRowToExpense(row);
+
+    expect(result.id).toBe("exp-1");
+    expect(result.amount).toBe(5000);
+    expect(result.concept).toBe("Supermercado");
+    expect(result.category).toEqual({
+      id: "cat-1",
+      name: "Alimentacion",
+      color: "#6366f1",
+      icon: "",
+      created_at: "",
+      updated_at: "",
+      deleted_at: null,
+    });
+    expect(result.payment_method).toEqual({
+      id: "pm-1",
+      name: "Debito",
+      icon: "credit-card",
+      created_at: "",
+      updated_at: "",
+      deleted_at: null,
+    });
+  });
+
+  it("maps a row without category and payment_method", () => {
+    const row = {
+      id: "exp-2",
+      amount: 3000,
+      concept: "Cafe",
+      description: "",
+      recurring_months: 0,
+      category_id: null,
+      payment_method_id: null,
+      date: "2026-06-02",
+      created_at: "2026-06-02T08:00:00Z",
+      updated_at: "2026-06-02T08:00:00Z",
+      deleted_at: null,
+      cat_name: null,
+      cat_color: null,
+      pm_name: null,
+      pm_icon: null,
+    };
+
+    const result = mapRowToExpense(row);
+
+    expect(result.id).toBe("exp-2");
+    expect(result.category).toBeNull();
+    expect(result.payment_method).toBeNull();
+  });
+
+  it("falls back updated_at to created_at when updated_at is missing", () => {
+    const row = {
+      id: "exp-3",
+      amount: 1500,
+      concept: "Taxi",
+      description: null,
+      recurring_months: null,
+      category_id: null,
+      payment_method_id: null,
+      date: "2026-06-03",
+      created_at: "2026-06-03T12:00:00Z",
+      updated_at: null,
+      deleted_at: null,
+      cat_name: null,
+      cat_color: null,
+      pm_name: null,
+      pm_icon: null,
+    };
+
+    const result = mapRowToExpense(row);
+
+    expect(result.updated_at).toBe("2026-06-03T12:00:00Z");
+    expect(result.description).toBe("");
+    expect(result.recurring_months).toBe(0);
+    expect(result.deleted_at).toBeNull();
   });
 });

@@ -1,3 +1,4 @@
+import { memo, useMemo } from "react";
 import { Pencil, Trash2, ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatearMoneda, groupByDate } from "@/lib/utils";
@@ -8,8 +9,8 @@ interface Props {
   onDelete: (id: string) => void;
 }
 
-export default function ExpenseList({ expenses, onDelete }: Props) {
-  const grouped = groupByDate(expenses, (e) => e.date);
+const ExpenseList = memo(function ExpenseList({ expenses, onDelete }: Props) {
+  const grouped = useMemo(() => groupByDate(expenses, (e) => e.date), [expenses]);
   const sortedDates = [...grouped.keys()].sort((a, b) => b.localeCompare(a));
 
   if (sortedDates.length === 0) {
@@ -92,4 +93,6 @@ export default function ExpenseList({ expenses, onDelete }: Props) {
       ))}
     </div>
   );
-}
+});
+
+export default ExpenseList;

@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Period } from "@/lib/types";
 import { getPeriodLabel, navigatePeriod } from "@/lib/utils";
@@ -15,7 +16,7 @@ const periodOptions: { value: Period; label: string }[] = [
   { value: "year", label: "ANO" },
 ];
 
-export default function PeriodSelector({
+const PeriodSelector = memo(function PeriodSelector({
   period,
   onPeriodChange,
   date,
@@ -61,4 +62,6 @@ export default function PeriodSelector({
       </div>
     </div>
   );
-}
+});
+
+export default PeriodSelector;

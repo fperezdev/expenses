@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Helmet } from "react-helmet-async";
 import { getDB } from "@/lib/db";
-import { getDateRange } from "@/lib/utils";
+import { getDateRange, mapRowToExpense } from "@/lib/utils";
 import type { ExpenseWithJoins, Period } from "@/lib/types";
 import PeriodSelector from "@/components/PeriodSelector";
 import ExpenseList from "@/components/ExpenseList";
@@ -29,42 +29,7 @@ export default function History() {
         [range.start, range.end]
       ) as unknown as Record<string, unknown>[];
 
-      const mapped: ExpenseWithJoins[] = rows.map((r) => ({
-        id: r.id as string,
-        amount: r.amount as number,
-        concept: r.concept as string,
-        description: (r.description as string) || "",
-        recurring_months: (r.recurring_months as number) || 0,
-        category_id: r.category_id as string | null,
-        payment_method_id: r.payment_method_id as string | null,
-        date: r.date as string,
-        created_at: r.created_at as string,
-        updated_at: (r.updated_at as string) || r.created_at as string,
-        deleted_at: (r.deleted_at as string) || null,
-        category: r.cat_name
-          ? {
-              id: r.category_id as string,
-              name: r.cat_name as string,
-              color: r.cat_color as string,
-              icon: "",
-              created_at: "",
-              updated_at: "",
-              deleted_at: null,
-            }
-          : null,
-        payment_method: r.pm_name
-          ? {
-              id: r.payment_method_id as string,
-              name: r.pm_name as string,
-              icon: (r.pm_icon as string) || "",
-              created_at: "",
-              updated_at: "",
-              deleted_at: null,
-            }
-          : null,
-      }));
-
-      setExpenses(mapped);
+      setExpenses(rows.map(mapRowToExpense));
     } catch {}
   }, [period, date]);
 

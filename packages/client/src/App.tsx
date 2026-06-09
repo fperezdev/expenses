@@ -8,7 +8,7 @@ import { isBackupDue } from "@/lib/backup";
 import { isLoggedIn, performSync } from "@/lib/sync";
 import Spinner from "@/components/Spinner";
 
-const hideNavRoutes = ["/edit/"];
+const HIDE_NAV_ROUTES = ["/edit/"];
 
 export default function AppLayout() {
   const location = useLocation();
@@ -41,7 +41,7 @@ export default function AppLayout() {
     }
   }, []);
 
-  const showNav = !hideNavRoutes.some((r) => location.pathname.startsWith(r));
+  const showNav = !HIDE_NAV_ROUTES.some((r) => location.pathname.startsWith(r));
 
   if (!dbReady && !dbError) {
     return (

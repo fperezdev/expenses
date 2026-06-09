@@ -5,6 +5,7 @@ import type {
   PeriodSummary,
   Category,
   Budget,
+  ExpenseWithJoins,
 } from "./types";
 
 export function formatearMoneda(amount: number): string {
@@ -131,6 +132,43 @@ export function getNextColor(usedColors: Set<string>): string {
   return (
     CATEGORY_COLORS.find((c) => !usedColors.has(c)) || CATEGORY_COLORS[0]
   );
+}
+
+export function mapRowToExpense(r: Record<string, unknown>): ExpenseWithJoins {
+  return {
+    id: r.id as string,
+    amount: r.amount as number,
+    concept: r.concept as string,
+    description: (r.description as string) || "",
+    recurring_months: (r.recurring_months as number) || 0,
+    category_id: r.category_id as string | null,
+    payment_method_id: r.payment_method_id as string | null,
+    date: r.date as string,
+    created_at: r.created_at as string,
+    updated_at: (r.updated_at as string) || (r.created_at as string),
+    deleted_at: (r.deleted_at as string) || null,
+    category: r.cat_name
+      ? {
+          id: r.category_id as string,
+          name: r.cat_name as string,
+          color: r.cat_color as string,
+          icon: "",
+          created_at: "",
+          updated_at: "",
+          deleted_at: null,
+        }
+      : null,
+    payment_method: r.pm_name
+      ? {
+          id: r.payment_method_id as string,
+          name: r.pm_name as string,
+          icon: (r.pm_icon as string) || "",
+          created_at: "",
+          updated_at: "",
+          deleted_at: null,
+        }
+      : null,
+  };
 }
 
 export function adjustDayToValidMonth(

@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 interface Props {
   cta?: string;
   onClick?: () => void;
@@ -5,7 +7,7 @@ interface Props {
   detail?: string;
 }
 
-export default function EmptyState({
+const EmptyState = memo(function EmptyState({
   cta,
   onClick,
   message = "Sin datos",
@@ -25,4 +27,6 @@ export default function EmptyState({
       )}
     </div>
   );
-}
+});
+
+export default EmptyState;

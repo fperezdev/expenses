@@ -86,6 +86,9 @@ export default function ExpenseForm({ expense }: Props) {
 
         if (recurring && repeatMonths > 1) {
           const baseDate = new Date(date + "T00:00:00");
+
+          // Compute all future dates first
+          const futureEntries: { id: string; adjustedDate: string }[] = [];
           for (let i = 1; i < repeatMonths; i++) {
             const futureDate = new Date(
               baseDate.getFullYear(),
@@ -97,27 +100,46 @@ export default function ExpenseForm({ expense }: Props) {
               futureDate.getMonth(),
               baseDate.getDate()
             );
+            futureEntries.push({ id: crypto.randomUUID(), adjustedDate });
+          }
 
-            const existing = await db.selectValue(
-              "SELECT COUNT(*) FROM expenses WHERE concept=? AND category_id=? AND date=? AND deleted_at IS NULL",
-              [concept.trim(), categoryId, adjustedDate]
-            );
-            if (existing && Number(existing) > 0) continue;
+          if (futureEntries.length > 0) {
+            // Single query to check which dates already have this expense
+            const placeholders = futureEntries.map(() => '?').join(',');
+            const categoryCondition = categoryId ? "category_id=?" : "category_id IS NULL";
+            const params = categoryId
+              ? [concept.trim(), categoryId, ...futureEntries.map(e => e.adjustedDate)]
+              : [concept.trim(), ...futureEntries.map(e => e.adjustedDate)];
 
-            await db.exec({
-              sql: `INSERT INTO expenses(id, amount, concept, description, recurring_months, category_id, payment_method_id, date, created_at) VALUES(?,?,?,?,?,?,?,?,?)`,
-              bind: [
-                crypto.randomUUID(),
-                numAmount,
-                concept.trim(),
-                description.trim(),
-                0,
-                categoryId,
-                paymentMethodId,
-                adjustedDate,
-                now,
-              ],
-            });
+            const existingRows = await db.selectObjects(
+              `SELECT date FROM expenses WHERE concept=? AND ${categoryCondition} AND date IN (${placeholders}) AND deleted_at IS NULL`,
+              params
+            ) as unknown as { date: string }[];
+            const existingDates = new Set(existingRows.map((r: { date: string }) => r.date));
+
+            // Insert only non-duplicate dates in parallel
+            const inserts = futureEntries
+              .filter(e => !existingDates.has(e.adjustedDate))
+              .map(e =>
+                db.exec({
+                  sql: `INSERT INTO expenses(id, amount, concept, description, recurring_months, category_id, payment_method_id, date, created_at) VALUES(?,?,?,?,?,?,?,?,?)`,
+                  bind: [
+                    e.id,
+                    numAmount,
+                    concept.trim(),
+                    description.trim(),
+                    0,
+                    categoryId,
+                    paymentMethodId,
+                    e.adjustedDate,
+                    now,
+                  ],
+                })
+              );
+
+            if (inserts.length > 0) {
+              await Promise.all(inserts);
+            }
           }
         }
       }

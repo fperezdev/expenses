@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Trash2, AlertTriangle } from "lucide-react";
 
 interface Props {
@@ -10,7 +11,7 @@ interface Props {
   variant?: "danger" | "warning";
 }
 
-export default function ConfirmDialog({
+const ConfirmDialog = memo(function ConfirmDialog({
   open,
   title,
   message,
@@ -56,4 +57,6 @@ export default function ConfirmDialog({
       </div>
     </div>
   );
-}
+});
+
+export default ConfirmDialog;
