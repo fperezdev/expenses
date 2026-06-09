@@ -8,16 +8,9 @@ const LAST_SYNC_TS_KEY = "sync_last_ts";
 const AUTH_TOKEN_KEY = "auth_token";
 const SERVER_URL_KEY = "server_url";
 
-// Default server URL for production
-const DEFAULT_SERVER_URL = ""; // empty = user must configure
-
-// ─── Server URL ───
-export function getServerUrl(): string {
-  return localStorage.getItem(SERVER_URL_KEY) || DEFAULT_SERVER_URL;
-}
-
-export function setServerUrl(url: string): void {
-  localStorage.setItem(SERVER_URL_KEY, url);
+// Default server URL — same origin since PWA and API are one Worker
+function getServerUrl(): string {
+  return localStorage.getItem(SERVER_URL_KEY) || location.origin;
 }
 
 // ─── Auth ───
@@ -91,11 +84,10 @@ async function upsertLocal(
 
 // ─── Sync ───
 export async function performSync(): Promise<{ ok: boolean; error?: string }> {
-  const serverUrl = getServerUrl();
   const token = getAuthToken();
 
-  if (!serverUrl || !token) {
-    return { ok: false, error: "Not configured or not logged in" };
+  if (!token) {
+    return { ok: false, error: "Not logged in" };
   }
 
   try {
@@ -132,7 +124,7 @@ export async function performSync(): Promise<{ ok: boolean; error?: string }> {
       budgets: localBudgets,
     };
 
-    const res = await fetch(`${serverUrl}/api/sync`, {
+    const res = await fetch(`${getServerUrl()}/api/sync`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -166,11 +158,8 @@ export async function performSync(): Promise<{ ok: boolean; error?: string }> {
 
 // ─── Auth API ───
 export async function login(email: string, password: string): Promise<{ ok: boolean; error?: string }> {
-  const serverUrl = getServerUrl();
-  if (!serverUrl) return { ok: false, error: "Server URL not configured" };
-
   try {
-    const res = await fetch(`${serverUrl}/api/auth/login`, {
+    const res = await fetch(`${getServerUrl()}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
@@ -189,11 +178,8 @@ export async function login(email: string, password: string): Promise<{ ok: bool
 }
 
 export async function register(email: string, password: string): Promise<{ ok: boolean; error?: string }> {
-  const serverUrl = getServerUrl();
-  if (!serverUrl) return { ok: false, error: "Server URL not configured" };
-
   try {
-    const res = await fetch(`${serverUrl}/api/auth/register`, {
+    const res = await fetch(`${getServerUrl()}/api/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
@@ -217,13 +203,11 @@ export function getSyncStatus(): {
   loggedIn: boolean;
   lastSyncTs: string;
   intervalHours: number;
-  serverUrl: string;
 } {
   return {
     enabled: isSyncEnabled(),
     loggedIn: isLoggedIn(),
     lastSyncTs: getLastSyncTs(),
     intervalHours: Math.round(getSyncIntervalMs() / (60 * 60 * 1000)),
-    serverUrl: getServerUrl(),
   };
 }

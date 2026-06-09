@@ -1,8 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-// We test the exported config functions that only use localStorage
-// Since sync.ts uses localStorage directly, we mock it
-
 const localStorageMock = (() => {
   let store: Record<string, string> = {};
   return {
@@ -15,9 +12,7 @@ const localStorageMock = (() => {
 
 Object.defineProperty(window, "localStorage", { value: localStorageMock });
 
-// Reimport after mock
 import {
-  setServerUrl, getServerUrl,
   isLoggedIn, clearAuth,
   isSyncEnabled, setSyncEnabled,
   getSyncIntervalMs, setSyncIntervalHours,
@@ -29,22 +24,11 @@ describe("sync config", () => {
     localStorageMock.clear();
   });
 
-  it("getServerUrl returns empty by default", () => {
-    expect(getServerUrl()).toBe("");
-  });
-
-  it("setServerUrl and getServerUrl roundtrip", () => {
-    setServerUrl("https://example.com");
-    expect(getServerUrl()).toBe("https://example.com");
-  });
-
   it("isLoggedIn returns false by default", () => {
     expect(isLoggedIn()).toBe(false);
   });
 
   it("isLoggedIn returns false after clearAuth", () => {
-    setServerUrl("https://example.com");
-    // login sets auth_token - simulate
     localStorageMock.setItem("auth_token", "fake-token");
     expect(isLoggedIn()).toBe(true);
     clearAuth();
@@ -86,7 +70,6 @@ describe("sync config", () => {
     const status = getSyncStatus();
     expect(status.enabled).toBe(false);
     expect(status.loggedIn).toBe(false);
-    expect(status.serverUrl).toBe("");
     expect(status.intervalHours).toBe(24);
   });
 

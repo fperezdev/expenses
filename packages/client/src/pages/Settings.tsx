@@ -18,7 +18,6 @@ import { exportAllToCSV, downloadCSV } from "@/lib/export";
 import { parseCSVPreview, importFromCSV } from "@/lib/import";
 import { performBackupDownload, isBackupEnabled, getBackupInfo } from "@/lib/backup";
 import {
-  getServerUrl, setServerUrl,
   isLoggedIn, clearAuth,
   isSyncEnabled, setSyncEnabled,
   getSyncIntervalMs, setSyncIntervalHours,
@@ -62,7 +61,6 @@ export default function Settings() {
   const [backingUp, setBackingUp] = useState(false);
 
   // ─── Cloud Sync state ───
-  const [serverUrl, setServerUrlState] = useState(getServerUrl());
   const [syncEnabled, setSyncEnabledState] = useState(isSyncEnabled());
   const [syncIntervalHours, setSyncIntervalHoursState] = useState(
     Math.round(getSyncIntervalMs() / (60 * 60 * 1000))
@@ -313,23 +311,6 @@ export default function Settings() {
           Guarda tus datos en la nube y accede desde varios dispositivos.
         </p>
 
-        {/* Server URL */}
-        <div className="mt-4">
-          <label className="block text-xs font-medium text-gray-500">
-            URL del servidor
-          </label>
-          <input
-            type="text"
-            value={serverUrl}
-            onChange={(e) => {
-              setServerUrlState(e.target.value);
-              setServerUrl(e.target.value);
-            }}
-            placeholder="https://expenses-api.tu-usuario.workers.dev"
-            className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm dark:border-gray-800 dark:bg-gray-800"
-          />
-        </div>
-
         {/* Auth section */}
         <div className="mt-4">
           {loggedIn ? (
@@ -405,7 +386,7 @@ export default function Settings() {
                     setAuthError(result.error || "Error");
                   }
                 }}
-                disabled={!authEmail || !authPassword || !serverUrl}
+                disabled={!authEmail || !authPassword}
                 className="w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
               >
                 {authMode === "login" ? "Iniciar sesion" : "Crear cuenta"}

@@ -6,16 +6,10 @@ import { sync } from "./sync";
 type Bindings = {
   DB: D1Database;
   JWT_SECRET: string;
+  ASSETS: Fetcher;
 };
 
 const app = new Hono<{ Bindings: Bindings }>();
-
-// COOP/COEP headers required for SQLite WASM OPFS
-app.use("*", async (c, next) => {
-  await next();
-  c.res.headers.set("Cross-Origin-Opener-Policy", "same-origin");
-  c.res.headers.set("Cross-Origin-Embedder-Policy", "require-corp");
-});
 
 // CORS for the PWA client
 app.use("*", cors({
@@ -32,5 +26,13 @@ app.route("/api/auth", auth);
 
 // Sync routes (protected)
 app.route("/api/sync", sync);
+
+// SPA fallback: delegate to static assets
+app.get("*", (c) => c.env.ASSETS.fetch(c.req.raw));
+
+app.onError((err, c) => {
+  console.error(err);
+  return c.json({ error: err.message, stack: err.stack }, 500);
+});
 
 export default app;
