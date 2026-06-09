@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Helmet } from "react-helmet-async";
 import { getDB } from "@/lib/db";
 import { getDateRange, calculateSummary, mapRowToExpense } from "@/lib/utils";
-import type { ExpenseWithJoins, Category, Budget, ViewMode, Period } from "@/lib/types";
+import type { ExpenseWithJoins, Category, PaymentMethod, Budget, ViewMode, Period } from "@/lib/types";
 import PeriodSelector from "@/components/PeriodSelector";
 import SummaryCards from "@/components/SummaryCards";
 import BudgetBar from "@/components/BudgetBar";
@@ -20,9 +20,11 @@ export default function Dashboard() {
   const [expenses, setExpenses] = useState<ExpenseWithJoins[]>([]);
   const [yearExpenses, setYearExpenses] = useState<ExpenseWithJoins[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [budget, setBudget] = useState<Budget | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -32,7 +34,7 @@ export default function Dashboard() {
       const yearRange = { start: `${year}-01-01`, end: `${year}-12-31` };
       const monthKey = `${year}-${String(date.getMonth() + 1).padStart(2, "0")}-01`;
 
-      const [expRows, yearRows, cats, budRow] = await Promise.all([
+      const [expRows, yearRows, cats, pms, budRow] = await Promise.all([
         db.selectObjects(
           `SELECT e.*, c.name as cat_name, c.color as cat_color,
                   p.name as pm_name, p.icon as pm_icon
@@ -56,6 +58,9 @@ export default function Dashboard() {
         db.selectObjects(
           "SELECT id, name, color, icon, created_at FROM categories WHERE deleted_at IS NULL ORDER BY name"
         ) as unknown as Category[],
+        db.selectObjects(
+          "SELECT id, name, icon, created_at FROM payment_methods WHERE deleted_at IS NULL ORDER BY name"
+        ) as unknown as PaymentMethod[],
         db.selectObject(
           "SELECT id, month, amount, created_at FROM budgets WHERE month=? AND deleted_at IS NULL",
           [monthKey]
@@ -65,6 +70,7 @@ export default function Dashboard() {
       setExpenses(expRows.map(mapRowToExpense));
       setYearExpenses(yearRows.map(mapRowToExpense));
       setCategories(cats);
+      setPaymentMethods(pms);
       setBudget(budRow || null);
     } catch {}
   }, [period, date]);
@@ -85,10 +91,12 @@ export default function Dashboard() {
 
   const filteredExpenses = useMemo(
     () =>
-      categoryFilter
-        ? expenses.filter((e) => e.category_id === categoryFilter)
-        : expenses,
-    [expenses, categoryFilter]
+      expenses.filter((e) => {
+        if (categoryFilter && e.category_id !== categoryFilter) return false;
+        if (paymentMethodFilter && e.payment_method_id !== paymentMethodFilter) return false;
+        return true;
+      }),
+    [expenses, categoryFilter, paymentMethodFilter]
   );
 
   const summary = useMemo(
@@ -165,6 +173,21 @@ export default function Dashboard() {
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {viewMode === "list" && paymentMethods.length > 0 && (
+          <select
+            value={paymentMethodFilter || ""}
+            onChange={(e) => setPaymentMethodFilter(e.target.value || null)}
+            className="rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-xs dark:border-gray-700 dark:bg-gray-800"
+          >
+            <option value="">Todos</option>
+            {paymentMethods.map((pm) => (
+              <option key={pm.id} value={pm.id}>
+                {pm.name}
               </option>
             ))}
           </select>
