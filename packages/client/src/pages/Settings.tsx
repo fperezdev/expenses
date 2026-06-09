@@ -10,11 +10,10 @@ import {
   ShieldCheck,
   Tag,
   CreditCard,
-  Database,
   Save,
 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
-import { getDB, getCurrentPath, changeDBPath } from "@/lib/db";
+import { getDB } from "@/lib/db";
 import { getMonthKey } from "@/lib/utils";
 import { exportAllToCSV, downloadCSV } from "@/lib/export";
 import { parseCSVPreview, importFromCSV } from "@/lib/import";
@@ -36,9 +35,6 @@ export default function Settings() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { theme, setTheme } = useTheme();
-  const [dbPath, setDbPath] = useState(getCurrentPath());
-  const [pathInput, setPathInput] = useState(getCurrentPath());
-  const [pathChanged, setPathChanged] = useState(false);
   const [importPreview, setImportPreview] = useState<{
     categories: number;
     paymentMethods: number;
@@ -72,11 +68,6 @@ export default function Settings() {
   const [authPassword, setAuthPassword] = useState("");
   const [authError, setAuthError] = useState("");
   const [tzFeedback, setTzFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
-
-  useEffect(() => {
-    setDbPath(getCurrentPath());
-    setPathInput(getCurrentPath());
-  }, []);
 
   useEffect(() => {
     (async () => {
@@ -114,14 +105,6 @@ export default function Settings() {
     } catch {} finally {
       setSavingBudget(false);
     }
-  };
-
-  const handlePathChange = async () => {
-    const trimmed = pathInput.trim();
-    if (!trimmed || trimmed === dbPath) return;
-    await changeDBPath(trimmed);
-    setDbPath(trimmed);
-    setPathChanged(false);
   };
 
   const handleExport = async () => {
@@ -191,51 +174,29 @@ export default function Settings() {
 
       <h1 className="text-xl font-bold">Ajustes</h1>
 
-      <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-        <p className="mb-3 text-sm font-medium text-gray-500">Tema</p>
-        <div className="flex rounded-lg bg-gray-100 p-0.5 dark:bg-gray-800">
-          {themeOptions.map((opt) => {
-            const Icon = opt.icon;
-            return (
-              <button
-                key={opt.value}
-                onClick={() => setTheme(opt.value)}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2 text-xs font-semibold transition-colors ${
-                  theme === opt.value
-                    ? "bg-white text-indigo-600 shadow-sm dark:bg-gray-700 dark:text-indigo-400"
-                    : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                }`}
-              >
-                <Icon size={14} />
-                {opt.label}
-              </button>
-            );
-          })}
+      {/* ─── Grupo 1: Presupuesto + Categorias + Metodos de pago ─── */}
+      <div className="space-y-4">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+          <p className="mb-3 text-sm font-medium text-gray-500">Presupuesto mensual</p>
+          <div className="flex gap-2">
+            <input
+              type="number"
+              value={budgetAmount}
+              onChange={(e) => setBudgetAmount(e.target.value)}
+              placeholder="Monto"
+              className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800"
+            />
+            <button
+              onClick={handleBudgetSave}
+              disabled={savingBudget}
+              className="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white disabled:opacity-50"
+            >
+              <Save size={16} />
+              {savingBudget ? "Guardando..." : "Guardar"}
+            </button>
+          </div>
         </div>
-      </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-        <p className="mb-3 text-sm font-medium text-gray-500">Presupuesto mensual</p>
-        <div className="flex gap-2">
-          <input
-            type="number"
-            value={budgetAmount}
-            onChange={(e) => setBudgetAmount(e.target.value)}
-            placeholder="Monto"
-            className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800"
-          />
-          <button
-            onClick={handleBudgetSave}
-            disabled={savingBudget}
-            className="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white disabled:opacity-50"
-          >
-            <Save size={16} />
-            {savingBudget ? "Guardando..." : "Guardar"}
-          </button>
-        </div>
-      </div>
-
-      <div className="space-y-2">
         <Link
           to="/categories"
           className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800"
@@ -252,126 +213,10 @@ export default function Settings() {
         </Link>
       </div>
 
-      <button
-        onClick={handleExport}
-        className="flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 text-left hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800"
-      >
-        <Download size={20} className="text-gray-400" />
-        <span className="flex-1 text-sm">Exportar CSV</span>
-      </button>
-
-      <button
-        onClick={() => fileInputRef.current?.click()}
-        disabled={importing}
-        className="flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 text-left hover:bg-gray-50 disabled:opacity-50 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800"
-      >
-        <Upload size={20} className="text-gray-400" />
-        <span className="flex-1 text-sm">
-          {importing ? "Importando..." : "Importar CSV"}
-        </span>
-      </button>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".csv"
-        onChange={handleFileSelect}
-        className="hidden"
-      />
-
-      <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-        <div className="flex items-center gap-3">
-          <ShieldCheck size={20} className="text-gray-400" />
-          <span className="text-sm font-medium text-gray-500">
-            Backup automatico
-          </span>
-        </div>
-        <p className="mt-2 text-xs text-gray-400">
-          Al abrir la app te avisa si toca descargar el backup. El CSV se guarda en tu dispositivo.
-        </p>
-
-        <label className="mt-3 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              const next = !backupEnabled;
-              setBackupEnabled(next);
-              try {
-                localStorage.setItem("backup_enabled", String(next));
-              } catch {}
-            }}
-            className={`flex h-6 w-11 items-center rounded-full transition-colors ${
-              backupEnabled ? "bg-indigo-600" : "bg-gray-300 dark:bg-gray-600"
-            }`}
-          >
-            <span
-              className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
-                backupEnabled ? "translate-x-6" : "translate-x-1"
-              }`}
-            />
-          </button>
-          <span className="text-sm font-medium">
-            {backupEnabled ? "Activado" : "Desactivado"}
-          </span>
-        </label>
-
-        {backupEnabled && (
-          <>
-            <div className="mt-3">
-              <label className="text-xs font-medium text-gray-500">
-                Intervalo (horas)
-              </label>
-              <input
-                type="number"
-                min="1"
-                max="720"
-                value={backupInterval}
-                onChange={(e) => {
-                  setBackupInterval(e.target.value);
-                  try {
-                    localStorage.setItem("backup_interval_hours", e.target.value);
-                  } catch {}
-                }}
-                className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800"
-              />
-            </div>
-
-            {backupInfo.lastBackupTs > 0 && (
-              <p className="mt-2 text-xs text-gray-400">
-                Ultimo backup:{" "}
-                {new Date(backupInfo.lastBackupTs).toLocaleString("es-CL")}
-              </p>
-            )}
-
-            <button
-              onClick={async () => {
-                setBackingUp(true);
-                const ok = await performBackupDownload();
-                setBackingUp(false);
-                setBackupInfo(getBackupInfo());
-                alert(
-                  ok
-                    ? "Backup descargado."
-                    : "Error al generar el backup."
-                );
-              }}
-              disabled={backingUp}
-              className="mt-3 w-full rounded-xl bg-indigo-600 py-2.5 text-sm font-medium text-white disabled:opacity-50"
-            >
-              {backingUp ? "Descargando..." : "Hacer backup ahora"}
-            </button>
-          </>
-        )}
-      </div>
-
-      {/* ─── Cloud Sync ─── */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-        <h3 className="font-semibold">Sincronizacion en la nube</h3>
-        <p className="mt-1 text-xs text-gray-400">
-          Guarda tus datos en la nube y accede desde varios dispositivos.
-        </p>
-
+      {/* ─── Grupo 2: Zona horaria + Login/register ─── */}
+      <div className="space-y-4">
         {/* Auth section */}
-        <div className="mt-4">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
           {loggedIn ? (
             <div>
               <p className="text-sm text-green-600 dark:text-green-400">
@@ -453,12 +298,12 @@ export default function Settings() {
 
         {/* Timezone selector */}
         {loggedIn && (
-          <div className="mt-4 space-y-2 border-t border-gray-100 pt-4 dark:border-gray-800">
+          <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
             <label className="text-sm text-gray-500 dark:text-gray-400">Zona horaria</label>
             <select
               value={timezone}
               onChange={(e) => setTimezone(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700"
+              className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700"
             >
               <option value="">Automatica (navegador)</option>
               <option value="America/Santiago">America/Santiago</option>
@@ -482,7 +327,7 @@ export default function Settings() {
                   setTzFeedback(null);
                 }, 5000);
               }}
-              className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="mt-2 w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
             >
               Guardar zona horaria
             </button>
@@ -495,39 +340,142 @@ export default function Settings() {
         )}
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-        <div className="flex items-center gap-3">
-          <Database size={20} className="text-gray-400" />
-          <span className="text-sm font-medium text-gray-500">
-            Archivo SQLite
+      {/* ─── Grupo 3: Backup automatico + Exportar CSV + Importar CSV ─── */}
+      <div className="space-y-4">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+          <div className="flex items-center gap-3">
+            <ShieldCheck size={20} className="text-gray-400" />
+            <span className="text-sm font-medium text-gray-500">
+              Backup automatico
+            </span>
+          </div>
+          <p className="mt-2 text-xs text-gray-400">
+            Al abrir la app te avisa si toca descargar el backup. El CSV se guarda en tu dispositivo.
+          </p>
+
+          <label className="mt-3 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                const next = !backupEnabled;
+                setBackupEnabled(next);
+                try {
+                  localStorage.setItem("backup_enabled", String(next));
+                } catch {}
+              }}
+              className={`flex h-6 w-11 items-center rounded-full transition-colors ${
+                backupEnabled ? "bg-indigo-600" : "bg-gray-300 dark:bg-gray-600"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+                  backupEnabled ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+            <span className="text-sm font-medium">
+              {backupEnabled ? "Activado" : "Desactivado"}
+            </span>
+          </label>
+
+          {backupEnabled && (
+            <>
+              <div className="mt-3">
+                <label className="text-xs font-medium text-gray-500">
+                  Intervalo (horas)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="720"
+                  value={backupInterval}
+                  onChange={(e) => {
+                    setBackupInterval(e.target.value);
+                    try {
+                      localStorage.setItem("backup_interval_hours", e.target.value);
+                    } catch {}
+                  }}
+                  className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800"
+                />
+              </div>
+
+              {backupInfo.lastBackupTs > 0 && (
+                <p className="mt-2 text-xs text-gray-400">
+                  Ultimo backup:{" "}
+                  {new Date(backupInfo.lastBackupTs).toLocaleString("es-CL")}
+                </p>
+              )}
+
+              <button
+                onClick={async () => {
+                  setBackingUp(true);
+                  const ok = await performBackupDownload();
+                  setBackingUp(false);
+                  setBackupInfo(getBackupInfo());
+                  alert(
+                    ok
+                      ? "Backup descargado."
+                      : "Error al generar el backup."
+                  );
+                }}
+                disabled={backingUp}
+                className="mt-3 w-full rounded-xl bg-indigo-600 py-2.5 text-sm font-medium text-white disabled:opacity-50"
+              >
+                {backingUp ? "Descargando..." : "Hacer backup ahora"}
+              </button>
+            </>
+          )}
+        </div>
+
+        <button
+          onClick={handleExport}
+          className="flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 text-left hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800"
+        >
+          <Download size={20} className="text-gray-400" />
+          <span className="flex-1 text-sm">Exportar CSV</span>
+        </button>
+
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={importing}
+          className="flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 text-left hover:bg-gray-50 disabled:opacity-50 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800"
+        >
+          <Upload size={20} className="text-gray-400" />
+          <span className="flex-1 text-sm">
+            {importing ? "Importando..." : "Importar CSV"}
           </span>
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+      </div>
+
+      {/* ─── Tema ─── */}
+      <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+        <p className="mb-3 text-sm font-medium text-gray-500">Tema</p>
+        <div className="flex rounded-lg bg-gray-100 p-0.5 dark:bg-gray-800">
+          {themeOptions.map((opt) => {
+            const Icon = opt.icon;
+            return (
+              <button
+                key={opt.value}
+                onClick={() => setTheme(opt.value)}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2 text-xs font-semibold transition-colors ${
+                  theme === opt.value
+                    ? "bg-white text-indigo-600 shadow-sm dark:bg-gray-700 dark:text-indigo-400"
+                    : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                }`}
+              >
+                <Icon size={14} />
+                {opt.label}
+              </button>
+            );
+          })}
         </div>
-        <p className="mt-2 text-xs text-gray-400">
-          Path actual en OPFS: {dbPath}
-        </p>
-        <div className="mt-3 flex gap-2">
-          <input
-            type="text"
-            value={pathInput}
-            onChange={(e) => {
-              setPathInput(e.target.value);
-              setPathChanged(e.target.value.trim() !== dbPath);
-            }}
-            placeholder="expenses.db"
-            className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800"
-          />
-          <button
-            onClick={handlePathChange}
-            disabled={!pathChanged}
-            className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50"
-          >
-            Cambiar
-          </button>
-        </div>
-        <p className="mt-2 text-xs text-gray-400">
-          Al cambiar el path se crea una base de datos nueva. Los datos no se
-          migran automaticamente.
-        </p>
       </div>
 
       <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">

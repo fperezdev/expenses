@@ -30,29 +30,13 @@ function call(method: string, params?: Record<string, unknown>): Promise<unknown
 }
 
 function getStoredPath(): string {
-  try {
-    return localStorage.getItem("db_path") || "expenses.db";
-  } catch {
-    return "expenses.db";
-  }
-}
-
-export function getCurrentPath(): string {
-  return dbPath;
+  return "expenses-fperez.db";
 }
 
 export async function initDB(filename?: string): Promise<void> {
   if (dbPath) return;
   const path = filename || getStoredPath();
   dbPath = path;
-  await call("open", { path: dbPath });
-}
-
-export async function changeDBPath(newPath: string): Promise<void> {
-  if (newPath === dbPath) return;
-  await call("close");
-  localStorage.setItem("db_path", newPath);
-  dbPath = newPath;
   await call("open", { path: dbPath });
 }
 
