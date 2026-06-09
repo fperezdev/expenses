@@ -3,6 +3,10 @@ import { getDB } from "./db";
 
 const SECTION_MARKER = "# SECTION:";
 
+function nowSQLite(): string {
+  return nowSQLite().replace("T", " ").replace(/\.\d{3}Z$/, "");
+}
+
 type ImportMode = "replace" | "merge";
 
 interface ParsedSections {
@@ -91,8 +95,8 @@ async function replaceAll(
         row.name || "",
         row.color || "#6366f1",
         row.icon || "",
-        row.created_at || new Date().toISOString(),
-        row.updated_at || row.created_at || new Date().toISOString(),
+        row.created_at || nowSQLite(),
+        row.updated_at || row.created_at || nowSQLite(),
         row.deleted_at || null,
       ],
     });
@@ -105,8 +109,8 @@ async function replaceAll(
         row.id || crypto.randomUUID(),
         row.name || "",
         row.icon || "",
-        row.created_at || new Date().toISOString(),
-        row.updated_at || row.created_at || new Date().toISOString(),
+        row.created_at || nowSQLite(),
+        row.updated_at || row.created_at || nowSQLite(),
         row.deleted_at || null,
       ],
     });
@@ -119,8 +123,8 @@ async function replaceAll(
         row.id || crypto.randomUUID(),
         row.month || "",
         parseFloat(String(row.amount || "0")),
-        row.created_at || new Date().toISOString(),
-        row.updated_at || row.created_at || new Date().toISOString(),
+        row.created_at || nowSQLite(),
+        row.updated_at || row.created_at || nowSQLite(),
         row.deleted_at || null,
       ],
     });
@@ -138,8 +142,8 @@ async function replaceAll(
         row.category_id || null,
         row.payment_method_id || null,
         row.date || "",
-        row.created_at || new Date().toISOString(),
-        row.updated_at || row.created_at || new Date().toISOString(),
+        row.created_at || nowSQLite(),
+        row.updated_at || row.created_at || nowSQLite(),
         row.deleted_at || null,
       ],
     });
@@ -173,8 +177,8 @@ async function mergeData(
         row.name || "",
         row.color || "#6366f1",
         row.icon || "",
-        row.created_at || new Date().toISOString(),
-        row.updated_at || row.created_at || new Date().toISOString(),
+        row.created_at || nowSQLite(),
+        row.updated_at || row.created_at || nowSQLite(),
         row.deleted_at || null,
       ],
     });
@@ -195,8 +199,8 @@ async function mergeData(
         row.id || crypto.randomUUID(),
         row.name || "",
         row.icon || "",
-        row.created_at || new Date().toISOString(),
-        row.updated_at || row.created_at || new Date().toISOString(),
+        row.created_at || nowSQLite(),
+        row.updated_at || row.created_at || nowSQLite(),
         row.deleted_at || null,
       ],
     });
@@ -215,7 +219,7 @@ async function mergeData(
     if (exists && Number(exists) > 0) {
       await db.exec({
         sql: "UPDATE budgets SET amount=?, updated_at=? WHERE month=?",
-        bind: [parseFloat(String(row.amount || "0")), new Date().toISOString(), month],
+        bind: [parseFloat(String(row.amount || "0")), nowSQLite(), month],
       });
     } else {
       await db.exec({
@@ -224,8 +228,8 @@ async function mergeData(
           row.id || crypto.randomUUID(),
           month,
           parseFloat(String(row.amount || "0")),
-          row.created_at || new Date().toISOString(),
-          row.updated_at || row.created_at || new Date().toISOString(),
+          row.created_at || nowSQLite(),
+          row.updated_at || row.created_at || nowSQLite(),
           row.deleted_at || null,
         ],
       });
@@ -255,8 +259,8 @@ async function mergeData(
         row.category_id || null,
         row.payment_method_id || null,
         row.date || "",
-        row.created_at || new Date().toISOString(),
-        row.updated_at || row.created_at || new Date().toISOString(),
+        row.created_at || nowSQLite(),
+        row.updated_at || row.created_at || nowSQLite(),
         row.deleted_at || null,
       ],
     });
