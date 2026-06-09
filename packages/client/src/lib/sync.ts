@@ -29,6 +29,19 @@ export function isLoggedIn(): boolean {
   return !!getAuthToken();
 }
 
+export function getUserEmail(): string | null {
+  const token = getAuthToken();
+  if (!token) return null;
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return payload.email || null;
+  } catch {
+    return null;
+  }
+}
+
 // ─── Last sync timestamp ───
 function getLastSyncTs(): string {
   return localStorage.getItem(LAST_SYNC_TS_KEY) || "1970-01-01 00:00:00";

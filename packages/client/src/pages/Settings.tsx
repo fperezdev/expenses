@@ -19,7 +19,7 @@ import { exportAllToCSV, downloadCSV } from "@/lib/export";
 import { parseCSVPreview, importFromCSV } from "@/lib/import";
 import { performBackupDownload, isBackupEnabled, getBackupInfo } from "@/lib/backup";
 import {
-  isLoggedIn, clearAuth,
+  isLoggedIn, clearAuth, getUserEmail,
   login, register,
   updateProfile, getUserTimezone,
 } from "@/lib/sync";
@@ -220,7 +220,7 @@ export default function Settings() {
           {loggedIn ? (
             <div>
               <p className="text-sm text-green-600 dark:text-green-400">
-                Conectado como usuario
+                Conectado como {getUserEmail()}
               </p>
               <button
                 onClick={() => { clearAuth(); setLoggedIn(false); }}
@@ -340,96 +340,96 @@ export default function Settings() {
         )}
       </div>
 
-      {/* ─── Grupo 3: Backup automatico + Exportar CSV + Importar CSV ─── */}
-      <div className="space-y-4">
-        <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-          <div className="flex items-center gap-3">
-            <ShieldCheck size={20} className="text-gray-400" />
-            <span className="text-sm font-medium text-gray-500">
-              Backup automatico
-            </span>
-          </div>
-          <p className="mt-2 text-xs text-gray-400">
-            Al abrir la app te avisa si toca descargar el backup. El CSV se guarda en tu dispositivo.
-          </p>
-
-          <label className="mt-3 flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                const next = !backupEnabled;
-                setBackupEnabled(next);
-                try {
-                  localStorage.setItem("backup_enabled", String(next));
-                } catch {}
-              }}
-              className={`flex h-6 w-11 items-center rounded-full transition-colors ${
-                backupEnabled ? "bg-indigo-600" : "bg-gray-300 dark:bg-gray-600"
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
-                  backupEnabled ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
-            </button>
-            <span className="text-sm font-medium">
-              {backupEnabled ? "Activado" : "Desactivado"}
-            </span>
-          </label>
-
-          {backupEnabled && (
-            <>
-              <div className="mt-3">
-                <label className="text-xs font-medium text-gray-500">
-                  Intervalo (horas)
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="720"
-                  value={backupInterval}
-                  onChange={(e) => {
-                    setBackupInterval(e.target.value);
-                    try {
-                      localStorage.setItem("backup_interval_hours", e.target.value);
-                    } catch {}
-                  }}
-                  className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800"
-                />
-              </div>
-
-              {backupInfo.lastBackupTs > 0 && (
-                <p className="mt-2 text-xs text-gray-400">
-                  Ultimo backup:{" "}
-                  {new Date(backupInfo.lastBackupTs).toLocaleString("es-CL")}
-                </p>
-              )}
-
-              <button
-                onClick={async () => {
-                  setBackingUp(true);
-                  const ok = await performBackupDownload();
-                  setBackingUp(false);
-                  setBackupInfo(getBackupInfo());
-                  alert(
-                    ok
-                      ? "Backup descargado."
-                      : "Error al generar el backup."
-                  );
-                }}
-                disabled={backingUp}
-                className="mt-3 w-full rounded-xl bg-indigo-600 py-2.5 text-sm font-medium text-white disabled:opacity-50"
-              >
-                {backingUp ? "Descargando..." : "Hacer backup ahora"}
-              </button>
-            </>
-          )}
+      {/* ─── Grupo 3: Backup automatico + CSV ─── */}
+      <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+        <div className="flex items-center gap-3">
+          <ShieldCheck size={20} className="text-gray-400" />
+          <span className="text-sm font-medium text-gray-500">
+            Backup automatico
+          </span>
         </div>
+        <p className="mt-2 text-xs text-gray-400">
+          Al abrir la app te avisa si toca descargar el backup. El CSV se guarda en tu dispositivo.
+        </p>
+
+        <label className="mt-3 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              const next = !backupEnabled;
+              setBackupEnabled(next);
+              try {
+                localStorage.setItem("backup_enabled", String(next));
+              } catch {}
+            }}
+            className={`flex h-6 w-11 items-center rounded-full transition-colors ${
+              backupEnabled ? "bg-indigo-600" : "bg-gray-300 dark:bg-gray-600"
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+                backupEnabled ? "translate-x-6" : "translate-x-1"
+              }`}
+            />
+          </button>
+          <span className="text-sm font-medium">
+            {backupEnabled ? "Activado" : "Desactivado"}
+          </span>
+        </label>
+
+        {backupEnabled && (
+          <>
+            <div className="mt-3">
+              <label className="text-xs font-medium text-gray-500">
+                Intervalo (horas)
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="720"
+                value={backupInterval}
+                onChange={(e) => {
+                  setBackupInterval(e.target.value);
+                  try {
+                    localStorage.setItem("backup_interval_hours", e.target.value);
+                  } catch {}
+                }}
+                className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800"
+              />
+            </div>
+
+            {backupInfo.lastBackupTs > 0 && (
+              <p className="mt-2 text-xs text-gray-400">
+                Ultimo backup:{" "}
+                {new Date(backupInfo.lastBackupTs).toLocaleString("es-CL")}
+              </p>
+            )}
+
+            <button
+              onClick={async () => {
+                setBackingUp(true);
+                const ok = await performBackupDownload();
+                setBackingUp(false);
+                setBackupInfo(getBackupInfo());
+                alert(
+                  ok
+                    ? "Backup descargado."
+                    : "Error al generar el backup."
+                );
+              }}
+              disabled={backingUp}
+              className="mt-3 w-full rounded-xl bg-indigo-600 py-2.5 text-sm font-medium text-white disabled:opacity-50"
+            >
+              {backingUp ? "Descargando..." : "Hacer backup ahora"}
+            </button>
+          </>
+        )}
+
+        <hr className="my-4 border-gray-200 dark:border-gray-700" />
 
         <button
           onClick={handleExport}
-          className="flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 text-left hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800"
+          className="flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3 text-left hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
         >
           <Download size={20} className="text-gray-400" />
           <span className="flex-1 text-sm">Exportar CSV</span>
@@ -438,7 +438,7 @@ export default function Settings() {
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={importing}
-          className="flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 text-left hover:bg-gray-50 disabled:opacity-50 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800"
+          className="mt-2 flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3 text-left hover:bg-gray-100 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
         >
           <Upload size={20} className="text-gray-400" />
           <span className="flex-1 text-sm">
