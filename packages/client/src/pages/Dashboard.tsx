@@ -187,11 +187,11 @@ export default function Dashboard() {
 
       <SummaryCards
         total={summary.total}
-        budgetAmount={budget?.amount || null}
+        budgetAmount={budget?.amount ? (period === "year" ? budget.amount * 12 : budget.amount) : null}
         spent={summary.total}
       />
 
-      {budget && <BudgetBar spent={summary.total} budget={budget.amount} />}
+      {budget && <BudgetBar spent={summary.total} budget={period === "year" ? budget.amount * 12 : budget.amount} />}
 
       <div className="flex items-center justify-between">
         <div className="flex rounded-lg bg-gray-100 p-0.5 dark:bg-gray-800">
