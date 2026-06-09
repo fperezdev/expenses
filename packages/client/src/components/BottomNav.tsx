@@ -1,11 +1,9 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, PlusCircle, ListFilter, PiggyBank, Settings } from "lucide-react";
+import { LayoutDashboard, PlusCircle, Settings } from "lucide-react";
 
 const tabs = [
   { to: "/", label: "Inicio", icon: LayoutDashboard },
   { to: "/add", label: "Nuevo", icon: PlusCircle },
-  { to: "/history", label: "Historial", icon: ListFilter },
-  { to: "/budget", label: "Presup.", icon: PiggyBank },
   { to: "/settings", label: "Ajustes", icon: Settings },
 ];
 

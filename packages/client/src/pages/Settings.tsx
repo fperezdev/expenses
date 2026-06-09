@@ -11,9 +11,11 @@ import {
   Tag,
   CreditCard,
   Database,
+  Save,
 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { getDB, getCurrentPath, changeDBPath } from "@/lib/db";
+import { getMonthKey } from "@/lib/utils";
 import { exportAllToCSV, downloadCSV } from "@/lib/export";
 import { parseCSVPreview, importFromCSV } from "@/lib/import";
 import { performBackupDownload, isBackupEnabled, getBackupInfo } from "@/lib/backup";
@@ -66,6 +68,9 @@ export default function Settings() {
     Math.round(getSyncIntervalMs() / (60 * 60 * 1000))
   );
   const [loggedIn, setLoggedIn] = useState(isLoggedIn());
+  const [budgetAmount, setBudgetAmount] = useState("");
+  const [savingBudget, setSavingBudget] = useState(false);
+
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
@@ -77,6 +82,44 @@ export default function Settings() {
     setDbPath(getCurrentPath());
     setPathInput(getCurrentPath());
   }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const db = getDB();
+        const mk = getMonthKey(new Date());
+        const row = await db.selectObject(
+          "SELECT amount FROM budgets WHERE month=? AND deleted_at IS NULL",
+          [mk]
+        ) as unknown as { amount: number } | undefined;
+        if (row) setBudgetAmount(row.amount.toString());
+      } catch {}
+    })();
+  }, []);
+
+  const handleBudgetSave = async () => {
+    const amount = parseFloat(budgetAmount);
+    if (!amount || amount <= 0) return;
+    setSavingBudget(true);
+    try {
+      const db = getDB();
+      const mk = getMonthKey(new Date());
+      const existing = await db.selectObject(
+        "SELECT id FROM budgets WHERE month=? AND deleted_at IS NULL",
+        [mk]
+      ) as unknown as { id: string } | undefined;
+      if (existing) {
+        await db.exec({ sql: "UPDATE budgets SET amount=?, updated_at=datetime('now') WHERE id=?", bind: [amount, existing.id] });
+      } else {
+        await db.exec({
+          sql: "INSERT INTO budgets(id, month, amount) VALUES(?,?,?)",
+          bind: [crypto.randomUUID(), mk, amount],
+        });
+      }
+    } catch {} finally {
+      setSavingBudget(false);
+    }
+  };
 
   const handlePathChange = async () => {
     const trimmed = pathInput.trim();
@@ -173,6 +216,27 @@ export default function Settings() {
               </button>
             );
           })}
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+        <p className="mb-3 text-sm font-medium text-gray-500">Presupuesto mensual</p>
+        <div className="flex gap-2">
+          <input
+            type="number"
+            value={budgetAmount}
+            onChange={(e) => setBudgetAmount(e.target.value)}
+            placeholder="Monto"
+            className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800"
+          />
+          <button
+            onClick={handleBudgetSave}
+            disabled={savingBudget}
+            className="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white disabled:opacity-50"
+          >
+            <Save size={16} />
+            {savingBudget ? "Guardando..." : "Guardar"}
+          </button>
         </div>
       </div>
 

@@ -9,8 +9,6 @@ import { SWRegister } from "@/components/SWRegister";
 import Dashboard from "@/pages/Dashboard";
 import AddExpense from "@/pages/AddExpense";
 import EditExpense from "@/pages/EditExpense";
-import History from "@/pages/History";
-import Budget from "@/pages/Budget";
 import Categories from "@/pages/Categories";
 import PaymentMethods from "@/pages/PaymentMethods";
 import Settings from "@/pages/Settings";
@@ -28,8 +26,6 @@ createRoot(document.getElementById("app")!).render(
                 <Route index element={<Dashboard />} />
                 <Route path="add" element={<AddExpense />} />
                 <Route path="edit/:id" element={<EditExpense />} />
-                <Route path="history" element={<History />} />
-                <Route path="budget" element={<Budget />} />
                 <Route path="categories" element={<Categories />} />
                 <Route path="payment-methods" element={<PaymentMethods />} />
                 <Route path="settings" element={<Settings />} />
