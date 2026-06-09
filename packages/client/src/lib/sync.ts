@@ -222,7 +222,7 @@ export async function updateProfile(updates: { timezone?: string }): Promise<boo
     if (!res.ok) return false;
 
     const data = await res.json();
-    if (data.user?.timezone) {
+    if (data.user && "timezone" in data.user) {
       localStorage.setItem(USER_TIMEZONE_KEY, data.user.timezone);
     }
     return true;

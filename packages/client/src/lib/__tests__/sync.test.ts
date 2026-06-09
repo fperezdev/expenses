@@ -160,6 +160,27 @@ describe("timezone", () => {
     expect(localStorageMock.getItem("user_timezone")).toBe("Europe/Madrid");
   });
 
+  it("updateProfile accepts empty string timezone (browser auto-detect)", async () => {
+    localStorageMock.setItem("auth_token", "test-token");
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        user: { id: "1", timezone: "" },
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await updateProfile({ timezone: "" });
+    expect(result).toBe(true);
+
+    const opts = fetchMock.mock.calls[0][1];
+    expect(JSON.parse(opts.body)).toEqual({ timezone: "" });
+
+    expect(localStorageMock.getItem("user_timezone")).toBe("");
+  });
+
   it("updateProfile returns false when not logged in", async () => {
     const result = await updateProfile({ timezone: "UTC" });
     expect(result).toBe(false);

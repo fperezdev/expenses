@@ -83,7 +83,7 @@ auth.patch("/profile", authMiddleware as any, async (c) => {
   const userId = c.get("userId") as string;
   const { timezone } = await c.req.json<{ timezone: string }>();
 
-  if (!timezone || typeof timezone !== "string") {
+  if (typeof timezone !== "string") {
     return c.json({ error: "Timezone is required", code: "VALIDATION" }, 400);
   }
 
