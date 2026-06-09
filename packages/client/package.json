@@ -1,0 +1,38 @@
+{
+  "name": "@expenses/client",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@expenses/shared": "workspace:*",
+    "@sqlite.org/sqlite-wasm": "^3.53.0-build1",
+    "@tailwindcss/vite": "^4.3.0",
+    "lucide-react": "^1.17.0",
+    "papaparse": "^5.5.3",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-helmet-async": "^3.0.0",
+    "react-router-dom": "^7.16.0",
+    "recharts": "^3.8.1",
+    "tailwindcss": "^4.3.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.0",
+    "@testing-library/react": "^16.3.0",
+    "@types/papaparse": "^5.5.2",
+    "@types/react": "^19.2.16",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "jsdom": "^26.0.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.0.12",
+    "vitest": "^3.2.0"
+  }
+}

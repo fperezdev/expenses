@@ -1,0 +1,14 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+  "name": "expenses-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-06-08",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "expenses-db",
+      "database_id": "f0fa81c3-35ad-4bc0-a843-a3644ee70068"
+    }
+  ]
+}
